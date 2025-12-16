@@ -58,21 +58,27 @@ This repository focuses on the mobile application development, which includes:
 │  (Firmware) │◀────│              │◀────│  (Segmentation) │
 └─────────────┘     └──────────────┘     └─────────────────┘
                            │
-                           ├──────────────┬──────────────────┐
-                           ▼              ▼                  ▼
-                    ┌─────────────┐ ┌─────────────┐  ┌──────────┐
-                    │ Navigation  │ │Point & Desc │  │   TTS    │
-                    │   Logic     │ │   Module    │  │  Audio   │
-                    └─────────────┘ └─────────────┘  └──────────┘
-                           │              │                  ▲
-                           └──────────────┴──────────────────┘
+                           ▼
+                ┌──────────┴──────────┐
+                ▼                     ▼
+         ┌──────────────┐      ┌─────────────┐
+         │  Navigation  │      │ Point & Desc│
+         │    Logic     │      │   Module    │
+         └──────────────┘      └─────────────┘
+                │                     │
+                └──────────┬──────────┘
+                           ▼
+                    ┌──────────────┐
+                    │     TTS      │
+                    │    Audio     │
+                    └──────────────┘
 ```
 
 ### Pipeline Modes
 
-**Navigation Mode**: Continuous environment scanning → Segmentation → Path analysis → Audio navigation instructions
+**Navigation Mode**: Continuous environment scanning → Segmentation → Path analysis → TTS audio navigation instructions
 
-**Point-and-Describe Mode**: User gesture detection → Targeted object capture → Segmentation → Object identification → Audio description
+**Point-and-Describe Mode**: User gesture detection → Targeted object capture → Segmentation → Object identification → TTS audio description
 
 ## Team Structure
 
