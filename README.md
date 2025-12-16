@@ -4,7 +4,12 @@ A smart necklace navigation system for people with visual impairments using AI-p
 
 ## Project Overview
 
-SIGHTA-AI develops a wearable necklace device that provides real-time navigation assistance to visually impaired users. The system uses an integrated camera and segmentation model to analyze the environment and deliver audio-based navigation instructions through built-in speakers.
+SIGHTA-AI develops a wearable necklace device that provides intelligent assistance to visually impaired users through two core functionalities:
+
+1. **Navigation Mode**: Real-time navigation assistance by analyzing the environment and providing audio-based directional guidance
+2. **Point-and-Describe Mode**: Object identification where users point to an object and receive audio description of what they're pointing at
+
+The system uses an integrated camera with the SAM3 segmentation model to understand the environment and deliver instructions through built-in speakers.
 
 ## Hardware Components
 
@@ -28,9 +33,10 @@ This repository focuses on the mobile application development, which includes:
 
 - **ESP32 Communication**: Device connection, image frame receiving, command sending
 - **Segmentation Pipeline**: Integration with SAM3 instance segmentation model for inference and output handling
-- **Navigation Logic**: Processing segmentation results to generate navigation instructions
-- **Point-and-Describe Module**: Interactive scene description capability
-- **Audio Feedback**: Text-to-speech conversion for user notifications
+- **Downstream Logic Modules**:
+  - **Navigation Logic**: Processing segmentation results to generate real-time navigation instructions and obstacle avoidance guidance
+  - **Point-and-Describe Module**: Object identification and description when user points to objects in their environment
+- **Audio Feedback**: Text-to-speech conversion for delivering navigation instructions and object descriptions
 - **User Interface**: App UI and debugging/visualization tools
 
 ## Technology Stack
@@ -52,18 +58,21 @@ This repository focuses on the mobile application development, which includes:
 │  (Firmware) │◀────│              │◀────│  (Segmentation) │
 └─────────────┘     └──────────────┘     └─────────────────┘
                            │
-                           ▼
-                    ┌──────────────┐
-                    │  Navigation  │
-                    │    Logic     │
-                    └──────────────┘
-                           │
-                           ▼
-                    ┌──────────────┐
-                    │     TTS      │
-                    │    Audio     │
-                    └──────────────┘
+                           ├──────────────┬──────────────────┐
+                           ▼              ▼                  ▼
+                    ┌─────────────┐ ┌─────────────┐  ┌──────────┐
+                    │ Navigation  │ │Point & Desc │  │   TTS    │
+                    │   Logic     │ │   Module    │  │  Audio   │
+                    └─────────────┘ └─────────────┘  └──────────┘
+                           │              │                  ▲
+                           └──────────────┴──────────────────┘
 ```
+
+### Pipeline Modes
+
+**Navigation Mode**: Continuous environment scanning → Segmentation → Path analysis → Audio navigation instructions
+
+**Point-and-Describe Mode**: User gesture detection → Targeted object capture → Segmentation → Object identification → Audio description
 
 ## Team Structure
 
