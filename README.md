@@ -26,16 +26,6 @@ SIGHTA-AI develops a wearable necklace device that provides intelligent assistan
 
 The system uses an integrated camera with the SAM3 segmentation model to understand the environment and delivers all guidance through audio feedback, with the mobile screen supporting sighted helpers and system configuration.
 
-## Hardware Components (Device-side)
-
-*For reference - developed by separate firmware team:*
-
-- **ESP32-S3** microcontroller with integrated camera
-- **Camera Module** for environment sensing (10-15 FPS, 640x480)
-- **Microphone (I2S)** for voice commands (16kHz PCM audio)
-- **IMU Sensor** for orientation and motion detection
-- **BLE Module** for communication with mobile app
-- **Haptic Motor** for vibration feedback (optional)
 
 ## Design Philosophy
 
@@ -52,39 +42,15 @@ The system follows a three-tier architecture that balances latency requirements 
 - **Audio-First Feedback**: All navigation guidance delivered via audio; the mobile screen serves sighted helpers and configuration only
 - **Graceful Degradation**: System continues basic obstacle alerting even with poor connectivity using on-device fallbacks
 
-## System Architecture
+## Mobile Architecture Overview
 
-The system architecture consists of three interconnected layers that communicate through well-defined interfaces:
+This repository focuses on the mobile application layer, including:
 
-### Layer 1: Necklace Device (ESP32-S3)
-
-| Component | Responsibility |
-|-----------|-----------------|
-| Camera Module | Captures JPEG frames at 10-15 FPS, 640x480 resolution |
-| Microphone (I2S) | Captures PCM audio at 16kHz for voice commands |
-| IMU Sensor | Accelerometer + gyroscope for orientation and motion detection |
-| BLE Module | Bluetooth Low Energy for communication with mobile app |
-| Haptic Motor | Vibration feedback for urgent alerts (optional) |
-
-### Layer 2: Mobile Application
-
-| Module | Responsibility |
-|--------|-----------------|
-| BLE Manager | Handles device pairing, connection, and data streaming |
-| State Machine | Navigation mode controller (IDLE, NAVIGATING, CROSSING, SEARCHING, CHATTING, EMERGENCY) |
-| Cloud Client | WebSocket/REST client for cloud API communication |
-| Audio Engine | TTS playback, spatial audio mixing, voice prompt queue |
-| Local Fallback (optional) | On-device TFLite models for offline obstacle detection |
-
-### Layer 3: Cloud Services
-
-| Service | Responsibility |
-|---------|-----------------|
-| Vision API | SAM3 object detection, segmentation, scene analysis |
-| ASR Service | Real-time speech recognition (Whisper API or similar) |
-| LLM Service | Multimodal dialogue (GPT-4V, Claude Vision, etc.) |
-| TTS Service | Text-to-speech generation (ElevenLabs, Azure, etc.) |
-| Navigation Engine | Path planning, guidance generation, context tracking |
+- BLE connectivity and streaming with the necklace device
+- Navigation state machine and guidance logic
+- Cloud API client integration (Vision, Speech, LLM)
+- Audio engine with priority queue and spatial cues
+- Offline fallback using on-device models
 
 ## API Specifications
 
@@ -207,27 +173,11 @@ When offline, the system provides reduced but still useful functionality:
 
 ## Technology Recommendations
 
-### Cloud Platform Options
-
-| Service | Option A | Option B |
-|---------|----------|----------|
-| Vision ML | Self-hosted YOLO on AWS/GCP GPU instances | Roboflow Inference API |
-| ASR | OpenAI Whisper API | Deepgram / AssemblyAI |
-| TTS | ElevenLabs | OpenAI TTS / Azure Neural TTS |
-| Multimodal LLM | Claude Vision (Anthropic) | GPT-4o (OpenAI) |
-| Hosting | AWS (Lambda + EC2 GPU) | GCP (Cloud Run + Vertex AI) |
-
 ### Mobile Development
 
 - **Cross-Platform**: React Native with native modules for BLE and audio
 - **iOS Native**: Swift with CoreBluetooth, AVFoundation, CoreML
 - **Android Native**: Kotlin with Android BLE, ExoPlayer, TFLite
-
-### Backend Framework
-
-- **Recommended**: FastAPI (Python) - excellent async support, easy ML integration
-- **Alternative**: Node.js with Express/Fastify for WebSocket-heavy workloads
-- **Infrastructure**: Docker + Kubernetes for scalable deployment
 
 ## Data Flow Architecture
 
