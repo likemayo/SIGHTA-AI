@@ -1,5 +1,49 @@
 This is a new [**React Native**](https://reactnative.dev) project, bootstrapped using [`@react-native-community/cli`](https://github.com/react-native-community/cli).
 
+# Development Environment Configuration
+
+## Requirements & Installation
+
+| Component | Version | Status | Command to Verify |
+|-----------|---------|--------|-------------------|
+| **Node.js** | v20+ | ✅ Verified | `node --version` |
+| **npm** | 10+ | ✅ Verified | `npm --version` |
+| **Xcode** (iOS) | 15.0+ | ✅ Verified | `xcode-select -p` |
+| **CocoaPods** | 1.14+ | ✅ Verified | `pod --version` |
+| **Android SDK** | API 33+ | ✅ Verified | `adb version` |
+| **Gradle** | 8.0+ | ✅ Verified | `cd android && ./gradlew -v` |
+| **Watchman** | 2024+ | ✅ Verified | `watchman -v` |
+| **React Native** | 0.73.2 | ✅ Verified | `npx react-native --version` |
+| **React** | 18.2.0 | ✅ Verified | `npm list react` |
+
+### One-time Setup
+
+```sh
+# macOS command line tools
+xcode-select --install
+
+# Install via Homebrew
+brew install node@20 watchman
+
+# Install CocoaPods for iOS native deps
+sudo gem install cocoapods
+
+# Android environment variables (add to ~/.zshrc, then source ~/.zshrc)
+export ANDROID_HOME=$HOME/Library/Android/sdk
+export PATH=$ANDROID_HOME/emulator:$ANDROID_HOME/platform-tools:$ANDROID_HOME/tools:$ANDROID_HOME/tools/bin:$PATH
+
+# Verify Android tools
+which adb && adb version
+```
+
+### Project-specific Setup
+
+```sh
+cd /Users/wuyanlin/Documents/SIGHTA-AI
+npm install
+cd ios && pod install && cd ..
+```
+
 # Android/iOS Quick Start
 
 ## Prerequisites (one-time)
