@@ -1,6 +1,17 @@
-# SIGHTA-AI
+# SIGHTA-AI Mobile Application
 
 A smart necklace navigation system for people with visual impairments using AI-powered segmentation and audio feedback.
+
+## Repository Scope
+
+This repository contains the **mobile application development** for the SIGHTA-AI system. It includes:
+
+- BLE communication with the necklace device
+- Cloud API integration for AI inference and services
+- Navigation state machine and guidance logic
+- Audio feedback system with spatial audio
+- Offline fallback capabilities with on-device models
+- User interface and configuration tools
 
 ## Project Overview
 
@@ -15,13 +26,16 @@ SIGHTA-AI develops a wearable necklace device that provides intelligent assistan
 
 The system uses an integrated camera with the SAM3 segmentation model to understand the environment and delivers all guidance through audio feedback, with the mobile screen supporting sighted helpers and system configuration.
 
-## Hardware Components
+## Hardware Components (Device-side)
 
-- **ESP32-CAM** modules for image capture and processing
-- **Camera** for environment sensing
-- **Microphone** for voice commands
-- **Speakers** for audio feedback
-- **FTDI adapters** for firmware flashing
+*For reference - developed by separate firmware team:*
+
+- **ESP32-S3** microcontroller with integrated camera
+- **Camera Module** for environment sensing (10-15 FPS, 640x480)
+- **Microphone (I2S)** for voice commands (16kHz PCM audio)
+- **IMU Sensor** for orientation and motion detection
+- **BLE Module** for communication with mobile app
+- **Haptic Motor** for vibration feedback (optional)
 
 ## Design Philosophy
 
@@ -301,6 +315,20 @@ Handles all audio output with intelligent queuing:
 - Spatial audio positioning for directional cues
 - Volume normalization and ambient noise adjustment
 
+## Team Structure
+
+- **Mobile Development Team**: 2-3 developers
+  - React Native or native iOS/Android development
+  - Cloud API integration
+  - Navigation logic and audio engine implementation
+  - Testing and deployment
+
+*Hardware/Firmware development is handled by a separate team*
+
+## Getting Started
+
+*(To be added as development progresses)*
+
 ## Key Technologies & References
 
 ### Segmentation Model
@@ -310,21 +338,6 @@ Handles all audio output with intelligent queuing:
 
 ### Benchmark Project
 - OpenAIglasses for Navigation: https://github.com/AI-FanGe/OpenAIglasses_for_Navigation
-- Original implementation uses YOLO instance segmentation
-
-## Team Structure
-
-- **Hardware/Firmware Team**: 2 developers
-  - ESP32-S3 firmware development
-  - Hardware integration and testing
-  
-- **Software Team**: 2 developers
-  - Mobile application development
-  - Cloud backend and API integration
-
-## Getting Started
-
-*(To be added as development progresses)*
 
 ## License
 
