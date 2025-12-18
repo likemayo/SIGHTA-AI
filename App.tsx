@@ -5,33 +5,16 @@
  * @format
  */
 
-import { NewAppScreen } from '@react-native/new-app-screen';
-import { StatusBar, StyleSheet, useColorScheme, View } from 'react-native';
-import {
-  SafeAreaProvider,
-  useSafeAreaInsets,
-} from 'react-native-safe-area-context';
+import React from 'react';
+import { StatusBar, StyleSheet, Text, useColorScheme, View } from 'react-native';
 
 function App() {
   const isDarkMode = useColorScheme() === 'dark';
 
   return (
-    <SafeAreaProvider>
-      <StatusBar barStyle={isDarkMode ? 'light-content' : 'dark-content'} />
-      <AppContent />
-    </SafeAreaProvider>
-  );
-}
-
-function AppContent() {
-  const safeAreaInsets = useSafeAreaInsets();
-
-  return (
     <View style={styles.container}>
-      <NewAppScreen
-        templateFileName="App.tsx"
-        safeAreaInsets={safeAreaInsets}
-      />
+      <StatusBar barStyle={isDarkMode ? 'light-content' : 'dark-content'} />
+      <Text style={styles.title}>SightaAI</Text>
     </View>
   );
 }
@@ -39,6 +22,14 @@ function AppContent() {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: '#0a0a0a',
+  },
+  title: {
+    fontSize: 28,
+    fontWeight: '700',
+    color: '#f5f5f5',
   },
 });
 

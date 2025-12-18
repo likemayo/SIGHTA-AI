@@ -63,3 +63,6 @@ ios/Pods/
 # Misc
 .env
 .env.local
+.ssh_key_dev.txt
+build/
+build.log

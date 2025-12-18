@@ -13,21 +13,25 @@ This is a new [**React Native**](https://reactnative.dev) project, bootstrapped 
 	```
 - Verify Android tools: `which adb && adb version`
 
+yarn install
 ## Clone and install
 ```sh
-git clone <repo-url>
-cd SIGHTA-AI/SightaAI
+cd /Users/wuyanlin/Documents/SIGHTA-AI
 yarn install
 cd ios && pod install && cd ..   # iOS native deps
 ```
 
-## Start Metro
+## Start Metro (required before running iOS/Android)
 ```sh
-npx react-native start   # or: npx react-native start --reset-cache
+# optional: free the port
+lsof -nP -iTCP:8081 | awk 'NR>1{print $2}' | xargs -r kill -9
+
+npx react-native start --reset-cache
 ```
 
 ## Run iOS
 ```sh
+cd /Users/wuyanlin/Documents/SIGHTA-AI
 npx react-native run-ios
 ```
 
@@ -55,16 +59,13 @@ npx react-native run-android
 
 ## Step 1: Start Metro
 
-First, you will need to run **Metro**, the JavaScript build tool for React Native.
-
-To start the Metro dev server, run the following command from the root of your React Native project:
+From the project root `/Users/wuyanlin/Documents/SIGHTA-AI`, start Metro (do this before running iOS/Android):
 
 ```sh
-# Using npm
-npm start
+# optional: free port 8081
+lsof -nP -iTCP:8081 | awk 'NR>1{print $2}' | xargs -r kill -9
 
-# OR using Yarn
-yarn start
+npx react-native start --reset-cache
 ```
 
 ## Step 2: Build and run your app
@@ -74,37 +75,17 @@ With Metro running, open a new terminal window/pane from the root of your React 
 ### Android
 
 ```sh
-# Using npm
-npm run android
-
-# OR using Yarn
-yarn android
+cd /Users/wuyanlin/Documents/SIGHTA-AI
+npx react-native run-android
 ```
 
 ### iOS
 
-For iOS, remember to install CocoaPods dependencies (this only needs to be run on first clone or after updating native deps).
-
-The first time you create a new project, run the Ruby bundler to install CocoaPods itself:
+If native deps change, run once: `cd ios && pod install && cd ..`
 
 ```sh
-bundle install
-```
-
-Then, and every time you update your native dependencies, run:
-
-```sh
-bundle exec pod install
-```
-
-For more information, please visit [CocoaPods Getting Started guide](https://guides.cocoapods.org/using/getting-started.html).
-
-```sh
-# Using npm
-npm run ios
-
-# OR using Yarn
-yarn ios
+cd /Users/wuyanlin/Documents/SIGHTA-AI
+npx react-native run-ios
 ```
 
 If everything is set up correctly, you should see your new app running in the Android Emulator, iOS Simulator, or your connected device.
