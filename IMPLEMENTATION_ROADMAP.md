@@ -8,7 +8,7 @@ This document outlines the implementation and development steps for the SIGHTA-A
 
 ## Phase 1: Foundation & Setup
 
-**Duration:** 1-2 weeks | **Team:** 2-3 developers
+**Duration:** 1-2 weeks 
 
 ### Tasks
 1. **Project Initialization**
