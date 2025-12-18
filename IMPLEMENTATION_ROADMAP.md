@@ -26,6 +26,37 @@ This document outlines the implementation and development steps for the SIGHTA-A
 4. Validate background execution: iOS background modes; Android foreground service
 5. Establish platform-specific CI signing, build pipelines, and beta distribution
 
+### Development Strategy: Hybrid Parallel Approach
+
+**Rationale:**
+- Sequential iOS-only then Android approach doubles timeline and misses cross-platform architecture issues early
+- Hybrid parallel approach catches platform-specific problems during feature development, not during porting
+- Shared core business logic written once; platform adapters developed simultaneously
+
+**Timeline Comparison:**
+- **Sequential (iOS → Android)**: 6 months (Months 1-3 iOS, Months 4-6 Android porting)
+- **Hybrid Parallel**: 4-5 months (iOS foundation Week 1-2, then both platforms Weeks 3-12)
+
+**Development Phases - Parallel Track:**
+
+| Phase | Duration | iOS | Android | Shared |
+|-------|----------|-----|---------|--------|
+| Phase 1 | Week 1-2 | ✓ Foundation setup | Setup only | Project init, dependencies |
+| Phase 2 | Week 3-4 | ✓ BLE Manager | ✓ BLE Manager | Adapter interfaces, mocks |
+| Phase 3 | Week 5-6 | ✓ Cloud Client | ✓ Cloud Client | Shared client lib |
+| Phase 4 | Week 7-8 | ✓ State Machine | ✓ State Machine | Shared core logic |
+| Phase 5 | Week 9-10 | ✓ Audio Engine | ✓ Audio Engine | Priority queue, TTS client |
+| Phase 6 | Week 11 | ✓ UI (iOS) | ✓ UI (Android) | Shared screens, hooks |
+| Phase 7 | Week 12 | ✓ Offline/ML | ✓ Offline/ML | Connectivity monitor |
+| Phase 8 | Week 13-14 | ✓ Testing + Polish | ✓ Testing + Polish | E2E tests, perf benchmarks |
+| Phase 9 | Week 15-16 | ✓ Beta/Release | ✓ Beta/Release | Monitoring, analytics |
+
+**Key Principle:** Once Phase 2 begins (BLE Manager), iOS and Android development happens **simultaneously** with the same feature set. This ensures:
+- Platform-specific bugs discovered early (week 3-4 vs. month 5)
+- Shared interfaces validated against both platforms
+- No duplicate effort porting iOS code to Android
+- Better code reuse in `src/core/`
+
 ---
 
 ## Phase 1: Foundation & Setup
@@ -396,31 +427,45 @@ EMERGENCY: Fall detection or user-triggered emergency
 
 ---
 
-## Timeline Summary
+## Timeline Summary (Hybrid Parallel Approach)
 
-| Phase | Duration | Cumulative |
-|-------|----------|-----------|
-| Phase 1: Foundation | 1-2 weeks | 1-2 weeks |
-| Phase 2: BLE Communication | 2-3 weeks | 3-5 weeks |
-| Phase 3: Cloud Integration | 2-3 weeks | 5-8 weeks |
-| Phase 4: Navigation & State | 2-3 weeks | 7-11 weeks |
-| Phase 5: Audio System | 2-3 weeks | 9-14 weeks |
-| Phase 6: User Interface | 2-3 weeks | 11-17 weeks |
-| Phase 7: Offline & Fallback | 2-3 weeks | 13-20 weeks |
-| Phase 8: Testing & Optimization | 2-3 weeks | 15-23 weeks |
-| Phase 9: Deployment | 1-2 weeks | 16-25 weeks |
+### Compressed Timeline with iOS + Android Parallel Development
 
-**Estimated MVP Timeline:** 16-25 weeks (4-6 months)
+| Week | Phase | iOS | Android | Shared | Cumulative |
+|------|-------|-----|---------|--------|-----------|
+| 1-2 | Phase 1: Foundation | ✓ Setup | Setup | Project init, deps | 2 weeks |
+| 3-4 | Phase 2: BLE | ✓ Manager | ✓ Manager | Adapter interface | 4 weeks |
+| 5-6 | Phase 3: Cloud | ✓ Client | ✓ Client | Shared client lib | 6 weeks |
+| 7-8 | Phase 4: State | ✓ Machine | ✓ Machine | Core logic | 8 weeks |
+| 9-10 | Phase 5: Audio | ✓ Engine | ✓ Engine | Priority queue | 10 weeks |
+| 11 | Phase 6: UI | ✓ iOS UI | ✓ Android UI | Shared screens | 11 weeks |
+| 12 | Phase 7: Offline | ✓ ML/Cache | ✓ ML/Cache | Connectivity mon. | 12 weeks |
+| 13-14 | Phase 8: Testing | ✓ Test suite | ✓ Test suite | E2E, perf bench | 14 weeks |
+| 15-16 | Phase 9: Deployment | ✓ iOS build/beta | ✓ Android build/beta | Monitoring, analytics | 16 weeks |
+
+**Estimated MVP Timeline: 16 weeks (4 months)**
+- Saves 50% time vs. sequential approach (24 weeks)
+- Both iOS and Android ready for beta simultaneously
+
+### Sequential Comparison (NOT Recommended)
+- Weeks 1-12: iOS complete
+- Weeks 13-24: Android porting
+- **Total: 24 weeks (6 months)** - Risks architectural rework
 
 ---
 
 ## Resource Allocation
 
-### Team Structure
-- **2-3 Mobile Developers**
-  - 1 Lead Developer (architecture, critical systems)
-  - 1-2 Feature Developers (features, UI)
-  - 0-1 QA Engineer (testing, optimization)
+### Team Structure (Parallel Development)
+- **3 Mobile Developers (Recommended)**
+  - 1 Lead Developer - Architecture, shared core, adapter patterns
+  - 1 iOS Specialist - Native modules, CoreBluetooth, AVFoundation, iOS-specific features
+  - 1 Android Specialist - Native modules, Bluetooth LE GATT, audio/TTS, Android-specific features
+  - (Optional) 1 QA/DevOps - Testing automation, CI/CD, performance profiling
+
+**Alternative for 2-Developer Team:**
+- Week 1-4 (Phase 1-2): Both developers on shared foundation + iOS BLE
+- Week 5+ (Phase 3+): Dev 1 leads shared core; Dev 2 starts Android BLE in parallel
 
 ### Required Expertise
 - Mobile development (React Native or native iOS/Android)
@@ -441,12 +486,13 @@ EMERGENCY: Fall detection or user-triggered emergency
 4. **Battery drain** → Profile early, optimize aggressively
 5. **Audio interruption timing** → Rigorous testing of priority queue
 
-### Mitigation Strategies
-- Weekly performance benchmarking
-- Early prototype with real ESP32 device
-- Load testing with cloud APIs
-- Battery drain analysis starting Phase 4
-- Audio system stress testing in Phase 8
+### Mitigation Strategies (Parallel Development)
+- Weekly performance benchmarking on both platforms
+- Early prototype BLE adapter on iOS + Android (Week 3-4)
+- Load testing with cloud APIs (both platforms)
+- Battery drain analysis starting Phase 4 (parallel on both)
+- Audio system stress testing in Phase 8 (parallel on both)
+- Platform-specific issues caught during feature dev, not porting phase
 
 ---
 
