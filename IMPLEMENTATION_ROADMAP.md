@@ -4,6 +4,28 @@
 
 This document outlines the implementation and development steps for the SIGHTA-AI mobile application. The roadmap is organized into 9 phases covering foundation setup through production deployment.
 
+### Cross-Platform Strategy
+- Single codebase using React Native for UI and shared logic
+- Native modules per platform where needed (BLE, audio, offline ML)
+- Strict separation between shared core and platform adapters via TypeScript interfaces
+
+### Shared Core vs Platform Adapters
+- Shared Core (cross-platform):
+   - `NavigationStateMachine`, `GuidanceGenerator`, `APICache`, `CloudClient`
+   - UI screens (accessibility-first), global state, error handling, logging
+- Platform Adapters (native bindings):
+   - `BleAdapter` → iOS: CoreBluetooth; Android: Bluetooth LE (GATT)
+   - `AudioAdapter` → iOS: AVFoundation; Android: ExoPlayer/AudioTrack + AudioFocus
+   - `SpeechAdapter` (local fallback) → iOS: Speech/AVSpeechSynthesizer; Android: TextToSpeech
+   - `OfflineMlAdapter` → iOS: CoreML; Android: TensorFlow Lite
+
+### Cross-Platform Track Milestones (Parallel to Phases)
+1. Define TypeScript adapter interfaces and shared contracts
+2. Implement iOS and Android native modules for BLE, audio, (optional) speech, offline ML
+3. Wire adapters into shared core and feature modules
+4. Validate background execution: iOS background modes; Android foreground service
+5. Establish platform-specific CI signing, build pipelines, and beta distribution
+
 ---
 
 ## Phase 1: Foundation & Setup
@@ -452,6 +474,33 @@ EMERGENCY: Fall detection or user-triggered emergency
 - Analytics (Firebase Analytics, Mixpanel)
 
 ---
+
+## Platform Checklists
+
+### iOS Checklist
+- [ ] Info.plist privacy keys: `NSBluetoothAlwaysUsageDescription`, `NSMicrophoneUsageDescription`, `NSCameraUsageDescription`
+- [ ] Background Modes: Bluetooth LE accessories, Audio
+- [ ] Configure `AVAudioSession` (playAndRecord, ducking as needed)
+- [ ] CoreBluetooth scanning/connection with reconnection policy
+- [ ] Handle app lifecycle (suspend/resume) for BLE and audio
+- [ ] Entitlements and signing profiles
+- [ ] Test VoiceOver navigation flows
+
+### Android Checklist
+- [ ] Permissions (Android 12+): `BLUETOOTH_SCAN`, `BLUETOOTH_CONNECT`, `BLUETOOTH_ADVERTISE` (if needed)
+- [ ] Legacy location permission for BLE pre-Android 12
+- [ ] Foreground Service for continuous BLE/audio; notification channel
+- [ ] AudioFocus handling and mixing
+- [ ] Bluetooth LE scanning, GATT MTU tuning, reconnection policy
+- [ ] Battery optimizations exclusion (Doze/App Standby as needed)
+- [ ] Test TalkBack navigation flows
+
+## CI/CD for iOS & Android
+- iOS: Fastlane `gym` + TestFlight (`fastlane ios beta`), GitHub Actions macOS runners
+- Android: Gradle bundles + Play internal track (`fastlane android beta`)
+- Secrets management for signing (App Store Connect API key / Play JSON)
+- Env config via `react-native-config` for endpoints/keys per environment
+- Crash/analytics wiring validation in pre-release
 
 ## Success Metrics
 
