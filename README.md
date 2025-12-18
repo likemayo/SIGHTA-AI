@@ -4,12 +4,16 @@ A smart necklace navigation system for people with visual impairments using AI-p
 
 ## Project Overview
 
-SIGHTA-AI develops a wearable necklace device that provides intelligent assistance to visually impaired users through two core functionalities:
+SIGHTA-AI develops a wearable necklace device that provides intelligent assistance to visually impaired users. The system operates in multiple modes tailored to different user needs:
 
-1. **Navigation Mode**: Real-time navigation assistance by analyzing the environment and providing audio-based directional guidance
-2. **Point-and-Describe Mode**: Object identification where users point to an object and receive audio description of what they're pointing at
+1. **IDLE Mode**: Standby mode with low-frequency scene monitoring, listening for wake commands and alert preparation
+2. **NAVIGATING Mode**: Active blind path following with real-time guidance and obstacle detection for autonomous navigation
+3. **CROSSING Mode**: Dedicated crosswalk assistance with traffic light detection and alignment guidance
+4. **SEARCHING Mode**: Item search mode with object tracking and hand guidance when looking for specific objects
+5. **CHATTING Mode**: Conversational AI mode for questions about surroundings or general queries
+6. **EMERGENCY Mode**: Triggered by fall detection or user command, immediately alerts emergency contacts
 
-The system uses an integrated camera with the SAM3 segmentation model to understand the environment and deliver instructions through built-in speakers.
+The system uses an integrated camera with the SAM3 segmentation model to understand the environment and delivers all guidance through audio feedback, with the mobile screen supporting sighted helpers and system configuration.
 
 ## Hardware Components
 
