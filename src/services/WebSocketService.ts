@@ -3,7 +3,6 @@
  * Manages WebSocket connections, message handling, and reconnection logic
  */
 
-import { io, Socket } from 'socket.io-client';
 import { WebSocketConfig, MessageTypes } from '../config/websocket.config';
 import {
   ConnectionStatus,
@@ -19,7 +18,7 @@ import {
 } from '../types/websocket.types';
 
 class WebSocketService {
-  private socket: Socket | null = null;
+  private ws: WebSocket | null = null;
   private connectionStatus: ConnectionStatus = ConnectionStatus.DISCONNECTED;
   private reconnectAttempts: number = 0;
   private eventListeners: WebSocketEventListeners = {};
@@ -27,107 +26,112 @@ class WebSocketService {
   private isAuthenticated: boolean = false;
 
   constructor() {
-    this.initializeSocketListeners = this.initializeSocketListeners.bind(this);
+    this.initializeWsListeners = this.initializeWsListeners.bind(this);
   }
 
   /**
    * Initialize WebSocket connection
    */
   public connect(serverUrl?: string): void {
-    if (this.socket?.connected) {
-      console.log('WebSocket already connected');
+    if (this.ws && (this.ws.readyState === WebSocket.OPEN || this.ws.readyState === WebSocket.CONNECTING)) {
+      console.log('WebSocket already connecting/connected');
       return;
     }
 
     const url = serverUrl || WebSocketConfig.serverUrl;
     this.connectionStatus = ConnectionStatus.CONNECTING;
 
-    this.socket = io(url, {
-      reconnection: WebSocketConfig.reconnection,
-      reconnectionAttempts: WebSocketConfig.reconnectionAttempts,
-      reconnectionDelay: WebSocketConfig.reconnectionDelay,
-      reconnectionDelayMax: WebSocketConfig.reconnectionDelayMax,
-      timeout: WebSocketConfig.timeout,
-      transports: WebSocketConfig.transports,
-      autoConnect: true,
-    });
-
-    this.initializeSocketListeners();
+    try {
+      this.ws = new WebSocket(url);
+      this.initializeWsListeners();
+    } catch (error) {
+      console.error('WebSocket initialization error:', error);
+      this.connectionStatus = ConnectionStatus.ERROR;
+      this.eventListeners.onError?.(error as Error);
+    }
   }
 
   /**
    * Set up Socket.IO event listeners
    */
-  private initializeSocketListeners(): void {
-    if (!this.socket) return;
+  private initializeWsListeners(): void {
+    if (!this.ws) return;
 
-    this.socket.on('connect', () => {
+    this.ws.onopen = () => {
       console.log('WebSocket connected');
       this.connectionStatus = ConnectionStatus.CONNECTED;
       this.reconnectAttempts = 0;
       this.eventListeners.onConnect?.();
       this.processMessageQueue();
-    });
+    };
 
-    this.socket.on('disconnect', (reason: string) => {
-      console.log('WebSocket disconnected:', reason);
+    this.ws.onclose = (event) => {
+      console.log('WebSocket disconnected:', event.reason || 'closed');
       this.connectionStatus = ConnectionStatus.DISCONNECTED;
       this.isAuthenticated = false;
-      this.eventListeners.onDisconnect?.(reason);
-    });
+      this.eventListeners.onDisconnect?.(event.reason || 'closed');
 
-    this.socket.on('connect_error', (error: Error) => {
-      console.error('WebSocket connection error:', error);
+      // Reconnect if enabled
+      if (WebSocketConfig.reconnection && this.reconnectAttempts < WebSocketConfig.reconnectionAttempts) {
+        this.reconnectAttempts++;
+        this.connectionStatus = ConnectionStatus.RECONNECTING;
+        const delay = Math.min(
+          WebSocketConfig.reconnectionDelay * this.reconnectAttempts,
+          WebSocketConfig.reconnectionDelayMax
+        );
+        setTimeout(() => {
+          this.eventListeners.onReconnect?.(this.reconnectAttempts);
+          this.connect();
+        }, delay);
+      }
+    };
+
+    this.ws.onerror = (event) => {
+      console.error('WebSocket error:', event);
       this.connectionStatus = ConnectionStatus.ERROR;
-      this.eventListeners.onError?.(error);
-    });
+      this.eventListeners.onError?.(new Error('WebSocket error'));
+    };
 
-    this.socket.on('reconnect', (attemptNumber: number) => {
-      console.log('WebSocket reconnected after', attemptNumber, 'attempts');
-      this.connectionStatus = ConnectionStatus.CONNECTED;
-      this.eventListeners.onReconnect?.(attemptNumber);
-    });
+    this.ws.onmessage = (event) => {
+      try {
+        const parsed = JSON.parse(typeof event.data === 'string' ? event.data : '');
+        // Expect JSON envelope: { type, payload, timestamp }
+        const { type, payload } = parsed || {};
+        if (!type) return;
 
-    this.socket.on('reconnect_attempt', () => {
-      this.reconnectAttempts++;
-      this.connectionStatus = ConnectionStatus.RECONNECTING;
-      console.log('Reconnection attempt:', this.reconnectAttempts);
-    });
+        // Handle known message types
+        if (type === MessageTypes.CONNECTION_ACK) {
+          console.log('Connection acknowledged:', payload);
+          this.isAuthenticated = true;
+        } else if (type === MessageTypes.GUIDANCE_RESPONSE) {
+          this.eventListeners.onGuidanceResponse?.(payload as GuidanceResponse);
+        } else if (type === MessageTypes.ERROR) {
+          const err = payload as ErrorMessage;
+          this.eventListeners.onError?.(new Error(err?.message || 'Server error'));
+        }
 
-    // Custom message handlers
-    this.socket.on(MessageTypes.CONNECTION_ACK, (data: unknown) => {
-      console.log('Connection acknowledged:', data);
-      this.isAuthenticated = true;
-    });
-
-    this.socket.on(MessageTypes.GUIDANCE_RESPONSE, (data: GuidanceResponse) => {
-      console.log('Guidance response received:', data);
-      this.eventListeners.onGuidanceResponse?.(data);
-    });
-
-    this.socket.on(MessageTypes.ERROR, (error: ErrorMessage) => {
-      console.error('Server error:', error);
-      this.eventListeners.onError?.(new Error(error.message));
-    });
-
-    // Generic message handler
-    this.socket.onAny((eventName: string, ...args: unknown[]) => {
-      const message: WebSocketMessage = {
-        type: eventName,
-        payload: args[0],
-        timestamp: Date.now(),
-      };
-      this.eventListeners.onMessage?.(message);
-    });
+        // Generic dispatch
+        const message: WebSocketMessage = {
+          type,
+          payload,
+          timestamp: Date.now(),
+        };
+        this.eventListeners.onMessage?.(message);
+      } catch (e) {
+        console.warn('Failed to parse WS message:', e);
+      }
+    };
   }
 
   /**
    * Disconnect from WebSocket server
    */
   public disconnect(): void {
-    if (this.socket) {
-      this.socket.disconnect();
-      this.socket = null;
+    if (this.ws) {
+      try {
+        this.ws.close();
+      } catch {}
+      this.ws = null;
       this.connectionStatus = ConnectionStatus.DISCONNECTED;
       this.isAuthenticated = false;
       console.log('WebSocket disconnected');
@@ -152,8 +156,13 @@ class WebSocketService {
       messageId: this.generateMessageId(),
     };
 
-    if (this.isConnected() && this.socket) {
-      this.socket.emit(type, payload);
+    if (this.isConnected() && this.ws) {
+      try {
+        this.ws.send(JSON.stringify(message));
+      } catch (e) {
+        console.warn('WS send failed, queuing:', e);
+        this.messageQueue.push(message);
+      }
     } else {
       // Queue message for later delivery
       this.messageQueue.push(message);
@@ -193,14 +202,17 @@ class WebSocketService {
    * Process queued messages
    */
   private processMessageQueue(): void {
-    if (!this.isConnected() || !this.socket) return;
+    if (!this.isConnected() || !this.ws) return;
 
     console.log(`Processing ${this.messageQueue.length} queued messages`);
-    
     while (this.messageQueue.length > 0) {
       const message = this.messageQueue.shift();
       if (message) {
-        this.socket.emit(message.type, message.payload);
+        try {
+          this.ws.send(JSON.stringify(message));
+        } catch (e) {
+          console.warn('WS send from queue failed:', e);
+        }
       }
     }
   }
@@ -223,7 +235,7 @@ class WebSocketService {
    * Check if connected
    */
   public isConnected(): boolean {
-    return this.connectionStatus === ConnectionStatus.CONNECTED && this.socket?.connected === true;
+    return this.connectionStatus === ConnectionStatus.CONNECTED && this.ws?.readyState === WebSocket.OPEN;
   }
 
   /**

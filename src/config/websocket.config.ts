@@ -5,8 +5,8 @@
 
 export const WebSocketConfig = {
   // Server URL - update this to your actual server endpoint
-  // For Socket.IO, using http:// is recommended for the handshake
-  serverUrl: 'http://localhost:3000',
+  // For raw WebSocket, use ws:// or wss://
+  serverUrl: 'ws://localhost:3000',
   
   // Connection settings
   reconnection: true,
@@ -18,8 +18,8 @@ export const WebSocketConfig = {
   // Auto-connect on initialization
   autoConnect: false,
   
-  // Transport options
-  transports: ['websocket', 'polling'],
+  // Transport mode (raw websocket)
+  transportMode: 'websocket',
   
   // Enable debug mode for development
   debug: __DEV__,
