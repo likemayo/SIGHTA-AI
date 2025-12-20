@@ -5,7 +5,8 @@
 
 export const WebSocketConfig = {
   // Server URL - update this to your actual server endpoint
-  serverUrl: 'ws://localhost:3000',
+  // For Socket.IO, using http:// is recommended for the handshake
+  serverUrl: 'http://localhost:3000',
   
   // Connection settings
   reconnection: true,
