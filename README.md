@@ -44,12 +44,16 @@ npm install
 cd ios && pod install && cd ..
 ```
 
+**Dependencies include:**
+- `react-native-async-storage` - Persist app state
+- `ws` - Raw WebSocket server for testing (optional, only for local testing)
+
 # Android/iOS Quick Start
 
 ## Prerequisites (one-time)
 - macOS tools: `xcode-select --install`
 - CocoaPods: `sudo gem install cocoapods`
-- Node/Yarn/Watchman: `brew install node@20 yarn watchman`
+- Node/Watchman: `brew install node@20 watchman`
 - Android env (add to `~/.zshrc`, then `source ~/.zshrc`):
 	```sh
 	export ANDROID_HOME=$HOME/Library/Android/sdk
@@ -57,11 +61,10 @@ cd ios && pod install && cd ..
 	```
 - Verify Android tools: `which adb && adb version`
 
-yarn install
 ## Clone and install
 ```sh
 cd /Users/wuyanlin/Documents/SIGHTA-AI
-yarn install
+npm install
 cd ios && pod install && cd ..   # iOS native deps
 ```
 
@@ -136,7 +139,40 @@ If everything is set up correctly, you should see your new app running in the An
 
 This is one way to run your app — you can also build it directly from Android Studio or Xcode.
 
-## Step 3: Modify your app
+## Step 3: Test WebSocket Connectivity
+
+The app includes a WebSocket demo that connects to a local or remote server.
+
+### Option A: Test with Local Mock Server
+
+```sh
+# In a new terminal, start the local WebSocket test server
+cd /Users/wuyanlin/Documents/SIGHTA-AI
+node server-ws-example.js
+```
+
+Then in the app's WebSocket demo screen:
+- Tap **Connect** → status shows Connected
+- Tap **Authenticate** → app shows ✓ Authenticated
+- Tap **Request Guidance** → receives guidance response
+- Send a custom message → server echoes back
+
+### Option B: Connect to ESP32-S3 Hardware
+
+Update the server URL in `src/config/websocket.config.ts`:
+
+```typescript
+export const WebSocketConfig = {
+  serverUrl: 'ws://192.168.4.1:3000',  // Replace with your device IP/hostname
+  // ... other settings
+};
+```
+
+Then reload the app and use the same connect/auth/guidance flow.
+
+For details, see [WEBSOCKET_SETUP.md](docs/WEBSOCKET_SETUP.md) and [WEBSOCKET_IMPLEMENTATION_SUMMARY.md](WEBSOCKET_IMPLEMENTATION_SUMMARY.md).
+
+## Step 4: Modify your app
 
 Now that you have successfully run the app, let's make changes!
 
@@ -149,12 +185,13 @@ When you want to forcefully reload, for example to reset the state of your app, 
 
 ## Congratulations!
 
-You've successfully run and modified  React Native App. :partying_face:
+You've successfully run and modified your React Native App. 🎉
 
 ### Now what?
 
-- If you want to add this new React Native code to an existing application, check out the [Integration guide](https://reactnative.dev/docs/integration-with-existing-apps).
-- If you're curious to learn more about React Native, check out the [docs](https://reactnative.dev/docs/getting-started).
+- Check out [WebSocket Networking Setup](WEBSOCKET_IMPLEMENTATION_SUMMARY.md) for cloud/hardware connectivity
+- If you want to add this new React Native code to an existing application, check out the [Integration guide](https://reactnative.dev/docs/integration-with-existing-apps)
+- If you're curious to learn more about React Native, check out the [docs](https://reactnative.dev/docs/getting-started)
 
 # Troubleshooting
 
