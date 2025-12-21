@@ -1,12 +1,11 @@
-# WebSocket Networking Setup
+# WebSocket Networking (Raw WS)
 
-Complete WebSocket implementation for real-time communication in SIGHTA-AI mobile app.
+Real-time messaging using the native WebSocket API (no Socket.IO client). Works with raw WS servers such as the ESP32-S3 or the provided local test server.
 
 ## 📦 Installation
 
-Already installed! The following packages are included:
-- `socket.io-client`: WebSocket client library with automatic reconnection
-- `@types/socket.io-client`: TypeScript type definitions
+- Client: uses the built-in `WebSocket` API — no extra client packages required.
+- Local test server (optional, already installed): `ws` (`npm install ws`) to run `server-ws-example.js`.
 
 ## 📁 Project Structure
 
@@ -24,51 +23,58 @@ src/
 │   └── index.ts                 # Hooks export
 ├── components/
 │   └── WebSocketExample.tsx     # Demo component
-└── WebSocketUsageExamples.ts    # Code examples and documentation
+└── docs/WebSocketUsageExamples.md  # Code examples and documentation
 ```
 
 ## 🚀 Quick Start
 
 ### 1. Configure Server URL
 
-Update the server URL in `src/config/websocket.config.ts`:
+Update `src/config/websocket.config.ts`:
 
 ```typescript
 export const WebSocketConfig = {
-  serverUrl: 'ws://your-server-url:3000',  // Change this
+  serverUrl: 'ws://your-server-url:3000', // Change this (use wss:// in prod)
   reconnection: true,
   reconnectionAttempts: 5,
-  // ... other settings
+  reconnectionDelay: 1000,
+  reconnectionDelayMax: 5000,
+  timeout: 20000,
+  autoConnect: false,
+  transportMode: 'websocket',
+  debug: __DEV__,
 };
 ```
 
-### 2. Use in a Component (with Hook)
+### 2. Use in a Component (hook)
 
 ```typescript
 import React, { useEffect } from 'react';
+import { Text } from 'react-native';
 import { useWebSocket } from './hooks/useWebSocket';
 
 function MyComponent() {
-  const { 
-    isConnected, 
-    connect, 
+  const {
+    isConnected,
+    connect,
     disconnect,
     sendMessage,
-    registerListeners 
+    registerListeners,
   } = useWebSocket();
 
   useEffect(() => {
     connect();
-    
+
     registerListeners({
       onConnect: () => console.log('Connected!'),
+      onMessage: (msg) => console.log('Inbound', msg),
       onGuidanceResponse: (response) => {
         console.log('Guidance:', response.guidance);
       },
     });
 
     return () => disconnect();
-  }, []);
+  }, [connect, disconnect, registerListeners]);
 
   return <Text>{isConnected ? 'Connected' : 'Disconnected'}</Text>;
 }
@@ -77,12 +83,12 @@ function MyComponent() {
 ### 3. Direct Service Usage
 
 ```typescript
-import WebSocketService from './services/WebSocketService';
+import WebSocketService from 'src/services/WebSocketService';
 
 // Connect
 WebSocketService.connect();
 
-// Send data
+// Send data (JSON envelope under the hood)
 WebSocketService.sendVideoFrame({
   frameData: 'base64-encoded-data',
   frameNumber: 1,
@@ -93,24 +99,154 @@ WebSocketService.sendVideoFrame({
 WebSocketService.disconnect();
 ```
 
+## 📘 Usage Examples
+
+### Component with hook
+
+```typescript
+import React, { useEffect } from 'react';
+import { useWebSocket } from 'src/hooks/useWebSocket';
+
+function MyComponent() {
+  const {
+    connectionStatus,
+    isConnected,
+    connect,
+    disconnect,
+    sendMessage,
+    registerListeners,
+  } = useWebSocket();
+
+  useEffect(() => {
+    connect();
+
+    registerListeners({
+      onConnect: () => console.log('Connected!'),
+      onDisconnect: (reason) => console.log('Disconnected:', reason),
+      onError: (error) => console.error('Error:', error),
+    });
+
+    return () => disconnect();
+  }, [connect, disconnect, registerListeners]);
+
+  return null; // render your UI
+}
+```
+
+### Direct service usage
+
+```typescript
+import WebSocketService from 'src/services/WebSocketService';
+
+WebSocketService.connect('ws://your-server-url:3000');
+
+WebSocketService.on({
+  onConnect: () => {
+    console.log('Connected to server');
+    WebSocketService.authenticate({
+      token: 'your-auth-token',
+      userId: 'user-123',
+      deviceId: 'device-456',
+    });
+  },
+  onGuidanceResponse: (response) => {
+    console.log('Received guidance:', response.guidance);
+  },
+});
+
+WebSocketService.sendVideoFrame({
+  frameData: 'base64-encoded-image-data',
+  frameNumber: 1,
+  timestamp: Date.now(),
+  metadata: { width: 1920, height: 1080, format: 'jpeg' },
+});
+
+WebSocketService.sendAudio({
+  audioData: 'base64-encoded-audio-data',
+  duration: 1000,
+  timestamp: Date.now(),
+  format: 'pcm',
+});
+
+WebSocketService.sendIMUData({
+  accelerometer: { x: 0.1, y: 0.2, z: 9.8 },
+  gyroscope: { x: 0.01, y: 0.02, z: 0.03 },
+  timestamp: Date.now(),
+});
+
+WebSocketService.requestGuidance({
+  context: 'User needs navigation help',
+  location: { latitude: 37.7749, longitude: -122.4194 },
+  timestamp: Date.now(),
+});
+
+WebSocketService.disconnect();
+```
+
+### Custom message types
+
+```typescript
+// src/config/websocket.config.ts
+export const MessageTypes = {
+  // existing types...
+  YOUR_CUSTOM_TYPE: 'your_custom_type',
+} as const;
+
+// usage
+WebSocketService.sendMessage(MessageTypes.YOUR_CUSTOM_TYPE, { your: 'data' });
+```
+
+### Error and reconnect states
+
+```typescript
+import { ConnectionStatus } from 'src/types/websocket.types';
+import { useWebSocket } from 'src/hooks/useWebSocket';
+
+function MyComponent() {
+  const { connectionStatus, error } = useWebSocket();
+
+  if (connectionStatus === ConnectionStatus.ERROR && error) {
+    return <ErrorView error={error} />;
+  }
+
+  if (connectionStatus === ConnectionStatus.RECONNECTING) {
+    return <ReconnectingView />;
+  }
+
+  return <MainView />;
+}
+```
+
+### Auto-connect on mount
+
+```typescript
+// Auto-connect as soon as the hook initializes
+const ws = useWebSocket('ws://localhost:3000', true);
+```
+
 ## 🎯 Features
 
-### ✅ Core Features
-- **Auto-reconnection**: Automatically reconnects with exponential backoff
-- **Message queueing**: Queues messages when disconnected, sends when reconnected
-- **Event-driven**: Subscribe to connection, disconnection, and custom events
-- **Type-safe**: Full TypeScript support with comprehensive types
-- **Singleton pattern**: Single connection instance across the app
-- **React Hook**: Easy integration with React Native components
+- Native WebSocket client (no Socket.IO dependency)
+- Auto-reconnection with backoff and max attempts
+- Message queueing while offline; flush on reconnect
+- Event-driven callbacks (connect, disconnect, reconnect, message, guidance)
+- Type-safe envelope and payload interfaces
+- Singleton service + convenience React hook
 
-### 📡 Message Types Supported
+## 📡 Message Protocol
 
-1. **Video Frames**: Send camera frames to server
-2. **Audio Data**: Stream audio for processing
-3. **IMU Data**: Send accelerometer, gyroscope data
-4. **Guidance Requests**: Request navigation assistance
-5. **Authentication**: Secure authentication with tokens
-6. **Custom Messages**: Send any custom message type
+All outbound messages are JSON envelopes:
+
+```json
+{
+  "type": "send_video_frame",
+  "payload": { /* your data */ },
+  "timestamp": 1730000000000,
+  "messageId": "1730000000000-abc123"
+}
+```
+
+Server responses should also use `{ type, payload, timestamp }`. Known server `type` values include `connection_ack`, `guidance_response`, and `error`.
 
 ## 📚 API Reference
 
@@ -118,24 +254,22 @@ WebSocketService.disconnect();
 
 ```typescript
 const {
-  connectionStatus,     // Current connection status
-  isConnected,         // Boolean connection state
-  isAuthenticated,     // Authentication status
-  error,              // Last error (if any)
-  queuedMessages,     // Number of queued messages
-  
+  connectionStatus,
+  isConnected,
+  isAuthenticated,
+  error,
+  queuedMessages,
   // Methods
-  connect,            // Connect to server
-  disconnect,         // Disconnect from server
-  sendMessage,        // Send generic message
-  registerListeners,  // Register event listeners
-  
-  // Specialized methods
-  sendVideoFrame,     // Send video frame
-  sendAudio,          // Send audio data
-  sendIMUData,        // Send IMU data
-  requestGuidance,    // Request guidance
-  authenticate,       // Authenticate user
+  connect,
+  disconnect,
+  sendMessage,
+  registerListeners,
+  // Specialized helpers
+  sendVideoFrame,
+  sendAudio,
+  sendIMUData,
+  requestGuidance,
+  authenticate,
 } = useWebSocket(serverUrl?, autoConnect?);
 ```
 
@@ -152,8 +286,8 @@ getConnectionStatus(): ConnectionStatus
 authenticate(authData: AuthenticationMessage): void
 getAuthenticationStatus(): boolean
 
-// Sending Data
-sendMessage(type: string, payload: any): void
+// Sending Data (JSON envelope: { type, payload, timestamp, messageId })
+sendMessage(type: string, payload: unknown): void
 sendVideoFrame(frameData: VideoFrameMessage): void
 sendAudio(audioData: AudioMessage): void
 sendIMUData(imuData: IMUDataMessage): void
@@ -168,16 +302,6 @@ clearMessageQueue(): void
 getQueuedMessageCount(): number
 ```
 
-## 🎨 Example Component
-
-A full demo component is available at `src/components/WebSocketExample.tsx`. It demonstrates:
-- Connection management
-- Authentication
-- Sending messages
-- Receiving responses
-- Error handling
-- Status indicators
-
 ## 🔧 Configuration Options
 
 ```typescript
@@ -189,104 +313,59 @@ export const WebSocketConfig = {
   reconnectionDelayMax: 5000,              // Max delay (ms)
   timeout: 20000,                          // Connection timeout
   autoConnect: false,                      // Connect on init
-  transports: ['websocket', 'polling'],    // Transport methods
+  transportMode: 'websocket',              // Raw WS transport
   debug: __DEV__,                          // Debug mode
 };
 ```
 
 ## 🏗️ Message Types
 
-Predefined message types in `MessageTypes` constant:
+Predefined in `MessageTypes`:
 
 ```typescript
 // Client to Server
-CONNECT, DISCONNECT, AUTHENTICATE
-SEND_VIDEO_FRAME, SEND_AUDIO, SEND_IMU_DATA
+CONNECT, DISCONNECT, AUTHENTICATE,
+SEND_VIDEO_FRAME, SEND_AUDIO, SEND_IMU_DATA,
 REQUEST_GUIDANCE
 
 // Server to Client
 CONNECTION_ACK, GUIDANCE_RESPONSE, ERROR, RECONNECT
 ```
 
-Add custom types in `src/config/websocket.config.ts`.
-
-## 🛡️ Error Handling
-
-```typescript
-registerListeners({
-  onError: (error: Error) => {
-    console.error('WebSocket error:', error);
-    // Handle error (show notification, retry, etc.)
-  },
-  onDisconnect: (reason: string) => {
-    console.log('Disconnected:', reason);
-    // Handle disconnection
-  },
-});
-```
-
-## 🔄 Connection States
-
-```typescript
-enum ConnectionStatus {
-  DISCONNECTED = 'DISCONNECTED',
-  CONNECTING = 'CONNECTING',
-  CONNECTED = 'CONNECTED',
-  RECONNECTING = 'RECONNECTING',
-  ERROR = 'ERROR',
-}
-```
-
-## 📱 Integration with SIGHTA-AI
-
-The WebSocket setup integrates with:
-- **BLE Manager**: Stream glasses data to cloud
-- **Cloud Client**: Real-time AI processing
-- **Navigation State**: Receive guidance updates
-- **Audio Engine**: Stream audio for TTS processing
+Add custom types in `src/config/websocket.config.ts` and handle them on your server.
 
 ## 🧪 Testing
 
 ```bash
-# Run tests
-npm test
+# 1) Start local WS server (optional)
+node server-ws-example.js
 
-# Test WebSocket connection
-# 1. Start your WebSocket server
-# 2. Update serverUrl in websocket.config.ts
-# 3. Run the app and use WebSocketExample component
+# 2) Update serverUrl if needed
+
+# 3) Run the app and open WebSocketExample
+npx react-native start --reset-cache
+npx react-native run-ios   # or run-android
 ```
 
 ## 🚨 Production Checklist
 
-- [ ] Update `serverUrl` to production endpoint
-- [ ] Implement proper authentication tokens
-- [ ] Add SSL/TLS support (wss://)
-- [ ] Configure error monitoring
-- [ ] Optimize reconnection strategy
-- [ ] Add message compression for large payloads
-- [ ] Implement rate limiting
-- [ ] Add heartbeat/ping mechanism
+- [ ] Update `serverUrl` to production endpoint (wss://)
+- [ ] Use real auth tokens in `authenticate`
+- [ ] Enable TLS (wss) and certs on the server
+- [ ] Add error/metrics monitoring
+- [ ] Tune reconnection/backoff for your infra
+- [ ] Compress large payloads if needed
+- [ ] Implement rate limiting and input validation on the server
+- [ ] Add heartbeat/ping-pong on the server if required
+
+## 📱 Integration Notes
+
+- Single raw WebSocket connection per app; configure the URL for your target (local mock or ESP32-S3).
+- Use `WebSocketExample` to verify connect → authenticate → send/receive flows before wiring into other screens.
+- Message queueing lets you call send methods even when offline; queued messages flush on reconnect.
 
 ## 📖 Additional Resources
 
-- [Socket.IO Client Docs](https://socket.io/docs/v4/client-api/)
-- [WebSocket Protocol](https://developer.mozilla.org/en-US/docs/Web/API/WebSocket)
-- See `src/WebSocketUsageExamples.ts` for more code examples
-
-## 🐛 Troubleshooting
-
-### Connection Issues
-- Check server URL is correct
-- Verify server is running and accessible
-- Check firewall/network settings
-- Enable debug mode: `debug: true` in config
-
-### Messages Not Sending
-- Check connection status with `isConnected()`
-- Messages are queued when disconnected
-- Check queue size with `getQueuedMessageCount()`
-
-### TypeScript Errors
-- Ensure all types are imported from `src/types/websocket.types.ts`
-- Check payload matches interface definitions
+- [MDN: WebSocket API](https://developer.mozilla.org/en-US/docs/Web/API/WebSocket)
+- [ws (Node) server](https://github.com/websockets/ws)
+- See `docs/WebSocketUsageExamples.md` for more code examples
