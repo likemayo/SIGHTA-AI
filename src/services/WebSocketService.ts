@@ -24,6 +24,7 @@ class WebSocketService {
   private eventListeners: WebSocketEventListeners = {};
   private messageQueue: WebSocketMessage[] = [];
   private isAuthenticated: boolean = false;
+  private shouldReconnect: boolean = true;
 
   constructor() {
     this.initializeWsListeners = this.initializeWsListeners.bind(this);
@@ -40,6 +41,7 @@ class WebSocketService {
 
     const url = serverUrl || WebSocketConfig.serverUrl;
     this.connectionStatus = ConnectionStatus.CONNECTING;
+    this.shouldReconnect = true; // allow auto-reconnect for non-manual disconnects
 
     try {
       this.ws = new WebSocket(url);
@@ -72,7 +74,7 @@ class WebSocketService {
       this.eventListeners.onDisconnect?.(event.reason || 'closed');
 
       // Reconnect if enabled
-      if (WebSocketConfig.reconnection && this.reconnectAttempts < WebSocketConfig.reconnectionAttempts) {
+      if (this.shouldReconnect && WebSocketConfig.reconnection && this.reconnectAttempts < WebSocketConfig.reconnectionAttempts) {
         this.reconnectAttempts++;
         this.connectionStatus = ConnectionStatus.RECONNECTING;
         const delay = Math.min(
@@ -129,6 +131,8 @@ class WebSocketService {
   public disconnect(): void {
     if (this.ws) {
       try {
+        // Suppress auto-reconnect for a manual disconnect
+        this.shouldReconnect = false;
         this.ws.close();
       } catch {}
       this.ws = null;
