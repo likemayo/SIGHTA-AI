@@ -177,10 +177,19 @@ src/
 
 ### Phase 1: Integration (Week 4)
 1. Wire all screens into navigation stack
-2. Integrate WebSocketService for connection/auth status
-3. Add error/notification flows (connection, battery, GPS, offline)
-4. Full accessibility pass (VoiceOver/TalkBack testing)
-5. Testing with screen off (audio-only mode)
+2. **Integrate ESP32-S3 WebSocket Connection**
+   - Connect to necklace via existing WebSocketService
+   - Handle camera frame streaming from ESP32
+   - Display connection status on all screens
+   - Implement reconnection logic with audio feedback
+   - Add "Lost connection" → "Reconnecting" → "Connected" flow
+3. **Integrate Cloud ML API Connection (HuggingFace/AWS)**
+   - Send frames from ESP32 to cloud
+   - Receive detection results
+   - Convert results to navigation guidance (TTS)
+4. Add error/notification flows (connection, battery, GPS, offline)
+5. Full accessibility pass (VoiceOver/TalkBack testing)
+6. Testing with screen off (audio-only mode)
 
 ### Phase 2: Enhancement (Weeks 5–6)
 1. Point-to-Identify screen (camera + tap + identify)
@@ -327,6 +336,117 @@ const celebratory = [100, 50, 100, 50, 300]; // 100ms on, 50ms off, etc.
 
 ---
 
+### 6.6 NavigationScreen ML Pipeline Integration
+
+**Data Flow**:
+```
+ESP32-S3 Necklace (Camera)
+    ↓ [WebSocket: Video frames]
+Mobile App (React Native)
+    ↓ [REST/WebSocket: Frames + commands]
+Cloud ML Service (HuggingFace/AWS)
+    ↓ [Response: Detections, segmentation]
+Mobile App (Process results)
+    ↓ [TTS: Navigation guidance]
+User (Earbuds)
+```
+
+**Implementation Steps**:
+1. Receive frames from ESP32 via WebSocket
+2. Buffer frames (keep last 2-3)
+3. Send keyframes to cloud ML API (every Nth frame)
+4. Parse detection results (obstacles, path, people)
+5. Generate navigation guidance based on detections
+6. Queue TTS with appropriate priority
+7. Update visual overlay (for helpers)
+
+**Guidance Generation Logic**:
+```typescript
+function generateGuidance(detections: Detection[]): Guidance {
+  // Check for critical dangers
+  const dangers = detections.filter(d => 
+    d.class === 'car' && d.distance < 3
+  );
+  if (dangers.length > 0) {
+    return { text: "STOP! Car approaching!", priority: 'critical' };
+  }
+
+  // Check for obstacles
+  const obstacles = detections.filter(d => 
+    ['person', 'bicycle', 'pole'].includes(d.class) &&
+    d.distance < 2
+  );
+  if (obstacles.length > 0) {
+    return { text: `Obstacle ahead, move ${obstacles[0].direction}`, priority: 'high' };
+  }
+
+  // Check path deviation
+  if (pathSegmentation.deviation > 15) {
+    return { text: `Slight ${pathSegmentation.direction} to follow path`, priority: 'medium' };
+  }
+
+  // Default
+  return { text: "Continue straight", priority: 'low' };
+}
+```
+
+---
+
+### 6.7 Press-to-Talk (PTT) Implementation
+
+**User Flow**:
+```
+User presses and holds main button
+    ↓ [Haptic: Double pulse]
+    ↓ [Earcon: "Ding" listening tone]
+    ↓ [TTS: (optional) "Listening..."]
+    ↓ [Start recording audio]
+User releases button
+    ↓ [Earcon: "Bonk" processing tone]
+    ↓ [Stop recording]
+    ↓ [Send to ASR service]
+    ↓ [Parse command]
+    ↓ [Execute action + confirm with TTS]
+```
+
+**Implementation**:
+```typescript
+const PTTButton = () => {
+  const [isRecording, setIsRecording] = useState(false);
+
+  const handlePressIn = async () => {
+    setIsRecording(true);
+    HapticService.doubleTap();
+    AudioService.playListening();
+    await VoiceRecognitionService.startListening();
+  };
+
+  const handlePressOut = async () => {
+    setIsRecording(false);
+    AudioService.playProcessing();
+    await VoiceRecognitionService.stopListening();
+    // Command will be processed in VoiceRecognitionService callback
+  };
+
+  return (
+    <TouchableOpacity
+      onPressIn={handlePressIn}
+      onPressOut={handlePressOut}
+      style={styles.pttButton}
+    >
+      <Text>HOLD TO SPEAK</Text>
+    </TouchableOpacity>
+  );
+};
+```
+
+**Alternative: Always-Listening (Phase 2)**
+- Use wake word detection ("Hey Navigator")
+- Lower battery impact with on-device processing
+- Continuous listening with privacy considerations
+
+---
+
 ## 7. Accessibility Requirements
 
 ### All Screens Must Have
@@ -460,6 +580,34 @@ npm install react-native-keep-awake
 - **Audio Mixing**: Use native audio session controls (ducking, focus)
 - **Battery**: Disable screen during audio-only mode; reduce inference frequency
 
+### Performance Benchmarks (Target)
+
+**Latency Targets**:
+- Button press → Haptic feedback: <50ms
+- Button press → Audio feedback: <100ms
+- Voice command → Confirmation: <500ms
+- Frame received → ML inference → Guidance: <300ms
+- Critical alert → TTS playback: <100ms
+
+**Resource Usage Targets**:
+- Battery drain: <10% per hour during navigation
+- Memory usage: <200MB average
+- CPU usage: <30% average (spikes to 60% during inference)
+- Network data: <10MB per hour (excluding camera streaming)
+
+**Monitoring**:
+```typescript
+// Add performance monitoring
+import perf from '@react-native-firebase/perf';
+
+const trace = perf().newTrace('navigation_guidance');
+await trace.start();
+// ... process ML results ...
+await trace.stop();
+```
+
+**Why:** Performance targets help developers optimize and debug.
+
 ---
 
 ## 12. Success Criteria (MVP)
@@ -513,6 +661,41 @@ npm install react-native-keep-awake
 - Earcon bank (audio files, descriptions)
 - Error handling matrix (scenarios, responses)
 - Testing checklist
+
+---
+
+## 📝 Summary of Key Changes
+
+### Must Add:
+1. ✅ WebSocket integration with ESP32 necklace (explicit steps)
+2. ✅ Cloud ML API connection details (environment variables)
+3. ✅ ML pipeline integration in NavigationScreen
+4. ✅ PTT implementation details
+5. ✅ Battery management specifics
+6. ✅ Offline mode capabilities
+
+### Should Add:
+7. ✅ User testing protocol (concrete steps)
+8. ✅ Error recovery flowcharts
+9. ✅ Performance benchmarks
+10. ✅ Clarify TypeScript vs JavaScript
+
+### Minor Fixes:
+11. ✅ Update dependency versions to match your project
+12. ✅ Add missing navigation dependencies
+
+---
+
+## ✨ Overall Assessment
+
+Your implementation plan is **excellent** - it's comprehensive, well-structured, and follows best practices. The suggested revisions mainly:
+
+1. **Add missing technical details** (WebSocket, ML API, PTT)
+2. **Clarify integration points** (ESP32, cloud, offline)
+3. **Make testing more concrete** (protocols, benchmarks)
+4. **Improve error handling** (flowcharts, recovery)
+
+With these additions, your plan will be **production-ready** and give developers everything they need to implement the audio-first UI successfully! 🎯
 
 ---
 
