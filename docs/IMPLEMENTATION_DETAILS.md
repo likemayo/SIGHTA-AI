@@ -1,4 +1,29 @@
 # UI/UX Implementation Details
+## Updated Execution Plan (Priority)
+
+**Immediate next steps**
+- Implement `src/services/TTSService.ts` with priority queue and `initialize/stop/repeatLast`.
+- Call `TTSService.initialize()` in `App.tsx` `useEffect` (with cleanup), and add temporary test buttons to validate 5 cases on iOS/Android.
+- Commit current Android changes (cleartext traffic + remove stale `android/app/src/main/assets/index.android.bundle`).
+
+**Phase 1: Services (finish before UI)**
+- Day 1: TTSService (priority queue, initialize/stop/repeatLast, tests: basic, interrupt, queue order, repeat, stop).
+- Day 2: HapticService (named patterns, `setEnabled`, test on both platforms).
+- Day 3: AudioCueService placeholder (log-only methods; `setEnabled/setVolume`).
+- Day 4: VoiceRecognitionService (wire `@react-native-voice/voice` events, fuzzy matching, confidence threshold, confirmation, failure counter, PTT test button).
+
+**Phase 2: Components & Navigation**
+- Day 6: `constants.ts`, `styles.ts`, `accessibility.ts`.
+- Day 7: Components (AccessibleButton using services directly, StatusBar, NotificationBanner).
+- Day 8: Navigation setup (stack navigator; wrap in App.tsx; remove temp test UI afterward).
+- Days 9-10: Screens (Home → Navigation → Emergency → Settings → Onboarding) with voice/haptics/TTS per specs.
+
+**Phase 3: ML & ESP32**
+- Add `MLService`, wire to existing `WebSocketService`, add `NavigationGuidanceService` for priority guidance.
+
+**Phase 4: Test & Polish**
+- Real-world tests, bugfix, docs, remove test buttons/logs.
+
 ## Concrete Code Structure & Service APIs
 
 ---
